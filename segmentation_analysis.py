@@ -183,6 +183,46 @@ def name_segments(profile: pd.DataFrame) -> dict[int, str]:
     return names
 
 
+def plot_pca(X_scaled: np.ndarray, labels: np.ndarray, names: dict[int, str]) -> None:
+    """Project the 3-D scaled RFM space down to 2-D with PCA, to *see* the
+    clusters. PCA finds the two directions that capture the most variance, so
+    well-separated clusters show up as visually distinct blobs."""
+    coords = PCA(n_components=2, random_state=RANDOM_STATE).fit_transform(X_scaled)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    for cluster in sorted(np.unique(labels)):
+        m = labels == cluster
+        ax.scatter(coords[m, 0], coords[m, 1], s=10, alpha=0.5,
+                   color=PALETTE[cluster % len(PALETTE)], label=names[cluster])
+    ax.set_xlabel("Principal component 1")
+    ax.set_ylabel("Principal component 2")
+    ax.set_title("Clusters in 2-D (PCA projection)")
+    ax.legend(loc="best", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(IMG_DIR / "pca_clusters.png", dpi=110)
+    plt.close(fig)
+
+
+def plot_snake(rfm_log_scaled: pd.DataFrame, names: dict[int, str]) -> None:
+    """Snake plot — the classic RFM segmentation chart. Shows each segment's
+    average *standardised* R, F, M as a line, so you can read a segment's
+    'shape' at a glance (e.g. Champions: low recency, high frequency & spend)."""
+    melted = rfm_log_scaled.copy()
+    melted["Segment"] = melted["Cluster"].map(names)
+    means = melted.groupby("Segment")[["Recency", "Frequency", "Monetary"]].mean()
+
+    fig, ax = plt.subplots(figsize=(6.5, 4))
+    for i, (segment, row) in enumerate(means.iterrows()):
+        ax.plot(["Recency", "Frequency", "Monetary"], row.values, "o-",
+                color=PALETTE[i % len(PALETTE)], label=segment)
+    ax.axhline(0, color=GREY, linewidth=0.8, linestyle="--")
+    ax.set_ylabel("Average standardised value")
+    ax.set_title("Snake plot — RFM profile of each segment")
+    ax.legend(loc="best", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(IMG_DIR / "snake_plot.png", dpi=110)
+    plt.close(fig)
+
+
 def main() -> None:
     df = load_and_clean()
     explore(df)
@@ -221,6 +261,13 @@ def main() -> None:
 
     sil = silhouette_score(X_scaled, rfm["Cluster"])
     print(f"Final silhouette score (k={N_CLUSTERS}): {sil:.3f}\n")
+
+    # PCA projection (see the clusters) and snake plot (segment RFM shapes).
+    plot_pca(X_scaled, rfm["Cluster"].to_numpy(), names)
+    scaled_df = pd.DataFrame(X_scaled, columns=["Recency", "Frequency", "Monetary"],
+                             index=rfm.index)
+    scaled_df["Cluster"] = rfm["Cluster"].to_numpy()
+    plot_snake(scaled_df, names)
 
     # --- Chart 1: segment sizes ---
     fig, ax = plt.subplots(figsize=(6, 3.5))
