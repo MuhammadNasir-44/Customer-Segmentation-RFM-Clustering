@@ -32,7 +32,8 @@ matplotlib.use("Agg")  # render charts to file without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
@@ -102,6 +103,37 @@ def build_rfm(df: pd.DataFrame) -> pd.DataFrame:
     return rfm
 
 
+def rfm_quantile_scores(rfm: pd.DataFrame) -> pd.DataFrame:
+    """Classic rule-based RFM: score each customer 1–5 on R, F, and M.
+
+    This is the traditional (non-ML) segmentation method. We compute it
+    alongside the K-Means clusters so the two approaches can be compared —
+    K-Means finds groups from the data, while this applies fixed business
+    rules (quintiles). A combined "RFM score" of 555 is the best customer.
+    """
+    scores = pd.DataFrame(index=rfm.index)
+
+    # Recency is reversed: a *smaller* gap since last order is better, so the
+    # most-recent quintile earns the top score of 5.
+    scores["R"] = pd.qcut(rfm["Recency"], 5, labels=[5, 4, 3, 2, 1]).astype(int)
+    # Frequency has many ties at 1–2 orders, so rank first to break them.
+    scores["F"] = pd.qcut(rfm["Frequency"].rank(method="first"), 5,
+                          labels=[1, 2, 3, 4, 5]).astype(int)
+    scores["M"] = pd.qcut(rfm["Monetary"], 5, labels=[1, 2, 3, 4, 5]).astype(int)
+
+    scores["RFM_Score"] = scores["R"] + scores["F"] + scores["M"]
+    scores["RFM_Cell"] = (scores["R"].astype(str) + scores["F"].astype(str)
+                          + scores["M"].astype(str))
+
+    print("Rule-based RFM scores (1–5 per dimension, 3–15 combined):")
+    print(scores[["R", "F", "M", "RFM_Score"]].describe().round(1).to_string(), "\n")
+    print(f"  'Best' customers (RFM_Score >= 13): "
+          f"{(scores['RFM_Score'] >= 13).sum():,}")
+    print(f"  'Lost' customers (RFM_Score <= 5):  "
+          f"{(scores['RFM_Score'] <= 5).sum():,}\n")
+    return scores
+
+
 def choose_k(X_scaled: np.ndarray, k_range=range(2, 9)) -> None:
     """Save an elbow (inertia) + silhouette chart to justify the k we pick."""
     inertias, silhouettes = [], []
@@ -157,11 +189,14 @@ def main() -> None:
 
     rfm = build_rfm(df)
 
+    # Rule-based RFM scoring (traditional method) alongside the ML clustering.
+    scores = rfm_quantile_scores(rfm)
+    rfm = rfm.join(scores)
+
     # RFM is heavily right-skewed (a few huge spenders). Log-transform before
     # scaling so K-Means (a distance method) isn't dominated by outliers.
-    rfm_log = rfm.copy()
-    for col in ["Recency", "Frequency", "Monetary"]:
-        rfm_log[col] = np.log1p(rfm_log[col])
+    # Only the three raw RFM columns feed the clustering — not the 1–5 scores.
+    rfm_log = np.log1p(rfm[["Recency", "Frequency", "Monetary"]])
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(rfm_log)
