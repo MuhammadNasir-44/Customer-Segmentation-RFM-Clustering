@@ -146,6 +146,13 @@ Python · pandas · scikit-learn · matplotlib
 
 ## Run it
 
+Two ways to explore this project:
+
+- **Notebook** — [`customer_segmentation.ipynb`](customer_segmentation.ipynb) is a
+  step-by-step walkthrough with the reasoning, tables, and charts rendered inline.
+  Best for reading.
+- **Script** — `segmentation_analysis.py` runs the full pipeline end to end.
+
 ```bash
 pip install -r requirements.txt
 python segmentation_analysis.py
