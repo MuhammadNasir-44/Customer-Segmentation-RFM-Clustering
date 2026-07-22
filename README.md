@@ -8,7 +8,12 @@ analysis, RFM feature engineering, and K-Means clustering.
 
 **Result:** four clear, actionable segments — from high-value **Champions** to a
 large **At-risk / Lapsing** group — discovered without any labels, purely from
-purchase behaviour.
+purchase behaviour. The headline finding: a **Champions** segment that is just
+**16.5% of customers drives 65% of all revenue.**
+
+The project deliberately shows **two segmentation approaches side by side** — the
+traditional **rule-based RFM 1–5 scoring** and **K-Means** machine learning — and
+sanity-checks the clusters against a second algorithm (hierarchical clustering).
 
 ---
 
@@ -46,8 +51,25 @@ customers**, **£8.9M** in revenue.
    would be dominated by a few outliers.
 4. **Choosing k** — used both the **elbow method** (inertia) and the
    **silhouette score** to pick the number of clusters.
-5. **Clustering** — ran **K-Means** and profiled each cluster on its *original*
+5. **Rule-based RFM scoring** — as a traditional baseline, scored every customer
+   **1–5** on each of R, F, and M (quintiles), giving a combined 3–15 score. This
+   is the classic non-ML method — useful to contrast with the clustering.
+6. **Clustering** — ran **K-Means** and profiled each cluster on its *original*
    (interpretable) RFM values, then named the segments in plain English.
+7. **Model check** — re-clustered with **hierarchical (Agglomerative) clustering**
+   and compared silhouette scores, to confirm the segments are real structure
+   and not an artefact of one algorithm.
+
+### Two approaches, compared
+
+| Method | How it groups | Best for |
+|--------|---------------|----------|
+| **RFM 1–5 scoring** | Fixed business rules (quintiles) | Simple, transparent, no ML needed |
+| **K-Means** | Learns natural groups from the data | Discovering structure you didn't define |
+
+K-Means also comfortably beat hierarchical clustering on silhouette
+(**0.34 vs 0.24** at k = 4) and scales to far larger customer bases, so it's the
+model kept for the final segments.
 
 ## Choosing the number of clusters
 
@@ -74,7 +96,28 @@ tells a genuinely useful story.
 *(Median values per segment.)*
 
 ![RFM fingerprint](images/segment_fingerprint.png)
+![Snake plot](images/snake_plot.png)
+![PCA clusters](images/pca_clusters.png)
 ![Segment scatter](images/segment_scatter.png)
+
+## Where the money actually is
+
+Customer *count* and *revenue* tell very different stories. The **Champions**
+segment is small but carries the business:
+
+![Revenue share](images/revenue_share.png)
+
+| Segment | Share of customers | Share of revenue |
+|---------|:------------------:|:----------------:|
+| 🏆 Champions | 16.5% | **64.9%** |
+| 🔁 Loyal regulars | 27.0% | 23.7% |
+| ⚠️ At-risk / Lapsing | 37.2% | 6.2% |
+| 🌱 New / Promising | 19.3% | 5.2% |
+
+This is the classic **80/20 (Pareto)** pattern — and it reframes the whole
+strategy: **protecting Champions matters more than any single win-back
+campaign**, because losing a few of them costs more than losing hundreds of
+low-value lapsing customers.
 
 ## Business insights (what to *do* with this)
 
@@ -111,4 +154,5 @@ python segmentation_analysis.py
 The script downloads nothing — place `Online Retail.xlsx` in `data/` (from the
 [UCI page](https://archive.ics.uci.edu/dataset/352/online+retail)). A segment
 summary prints to the console, charts are written to `images/`, and a labelled
-per-customer table is saved to `customer_segments.csv`.
+per-customer table (K-Means cluster **and** RFM 1–5 scores) is saved to
+`customer_segments.csv`.
