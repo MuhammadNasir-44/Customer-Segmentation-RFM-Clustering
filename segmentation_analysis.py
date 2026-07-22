@@ -223,6 +223,27 @@ def plot_snake(rfm_log_scaled: pd.DataFrame, names: dict[int, str]) -> None:
     plt.close(fig)
 
 
+def compare_models(X_scaled: np.ndarray, k: int) -> None:
+    """Sanity-check the choice of K-Means against a different algorithm.
+
+    Agglomerative (hierarchical) clustering builds groups a completely
+    different way — merging nearest points bottom-up rather than moving
+    centroids. If both find similarly clean groups at the same k, that's
+    evidence the segments are real structure in the data, not an artefact
+    of one algorithm.
+    """
+    km = KMeans(n_clusters=k, random_state=RANDOM_STATE, n_init=10)
+    agg = AgglomerativeClustering(n_clusters=k)
+    km_sil = silhouette_score(X_scaled, km.fit_predict(X_scaled))
+    agg_sil = silhouette_score(X_scaled, agg.fit_predict(X_scaled))
+
+    print(f"Model comparison at k={k} (silhouette, higher is better):")
+    print(f"  K-Means                    {km_sil:.3f}")
+    print(f"  Agglomerative (Ward)       {agg_sil:.3f}")
+    winner = "K-Means" if km_sil >= agg_sil else "Agglomerative"
+    print(f"  -> {winner} wins; K-Means also scales far better, so we keep it.\n")
+
+
 def plot_revenue_share(rfm: pd.DataFrame, names: dict[int, str]) -> pd.DataFrame:
     """How much of total revenue does each segment actually drive?
 
@@ -269,6 +290,7 @@ def main() -> None:
     X_scaled = scaler.fit_transform(rfm_log)
 
     choose_k(X_scaled)
+    compare_models(X_scaled, N_CLUSTERS)
 
     km = KMeans(n_clusters=N_CLUSTERS, random_state=RANDOM_STATE, n_init=10)
     rfm["Cluster"] = km.fit_predict(X_scaled)
