@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Large source dataset — download from UCI (see README)
+data/Online Retail.xlsx
