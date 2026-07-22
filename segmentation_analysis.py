@@ -223,6 +223,33 @@ def plot_snake(rfm_log_scaled: pd.DataFrame, names: dict[int, str]) -> None:
     plt.close(fig)
 
 
+def plot_revenue_share(rfm: pd.DataFrame, names: dict[int, str]) -> pd.DataFrame:
+    """How much of total revenue does each segment actually drive?
+
+    Customer *counts* and *revenue* are very different stories — a small
+    segment can carry a large share of the money. This is the classic
+    "80/20" (Pareto) lens that turns segments into budget decisions.
+    """
+    rev = rfm.groupby("Cluster")["Monetary"].sum()
+    share = (rev / rev.sum()).sort_values(ascending=False)
+    share.index = share.index.map(names)
+
+    print("Revenue share by segment:")
+    for segment, pct in share.items():
+        print(f"  {segment:<20} {pct:6.1%}")
+    print()
+
+    fig, ax = plt.subplots(figsize=(6, 3.5))
+    share.iloc[::-1].plot(kind="barh", color=PALETTE[: len(share)], ax=ax)
+    ax.set_xlabel("Share of total revenue")
+    ax.set_title("Which segments drive the revenue?")
+    ax.xaxis.set_major_formatter(lambda x, _: f"{x:.0%}")
+    fig.tight_layout()
+    fig.savefig(IMG_DIR / "revenue_share.png", dpi=110)
+    plt.close(fig)
+    return share
+
+
 def main() -> None:
     df = load_and_clean()
     explore(df)
@@ -268,6 +295,9 @@ def main() -> None:
                              index=rfm.index)
     scaled_df["Cluster"] = rfm["Cluster"].to_numpy()
     plot_snake(scaled_df, names)
+
+    # Revenue concentration — small segments can carry most of the money.
+    plot_revenue_share(rfm, names)
 
     # --- Chart 1: segment sizes ---
     fig, ax = plt.subplots(figsize=(6, 3.5))
