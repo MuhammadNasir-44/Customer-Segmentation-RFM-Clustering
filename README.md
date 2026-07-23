@@ -160,6 +160,7 @@ python segmentation_analysis.py
 
 The script downloads nothing — place `Online Retail.xlsx` in `data/` (from the
 [UCI page](https://archive.ics.uci.edu/dataset/352/online+retail)). A segment
-summary prints to the console, charts are written to `images/`, and a labelled
+summary prints to the console, charts are written to `images/`, a labelled
 per-customer table (K-Means cluster **and** RFM 1–5 scores) is saved to
-`customer_segments.csv`.
+`customer_segments.csv`, and a shareable multi-sheet Excel report for
+non-technical stakeholders is saved to `segment_summary.xlsx`.
