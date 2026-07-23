@@ -15,6 +15,9 @@ The project deliberately shows **two segmentation approaches side by side** — 
 traditional **rule-based RFM 1–5 scoring** and **K-Means** machine learning — and
 sanity-checks the clusters against a second algorithm (hierarchical clustering).
 
+📄 **For the full business write-up, see [`REPORT.md`](REPORT.md)** — an
+executive-style analysis of each segment with strategic recommendations.
+
 ---
 
 ## Problem
