@@ -223,6 +223,33 @@ def plot_snake(rfm_log_scaled: pd.DataFrame, names: dict[int, str]) -> None:
     plt.close(fig)
 
 
+def export_summary(profile: pd.DataFrame, share: pd.Series, rfm: pd.DataFrame) -> None:
+    """Write a tidy multi-sheet Excel report for non-technical stakeholders.
+
+    The CSV is great for analysts, but marketing/finance colleagues live in
+    Excel. This bundles the headline tables — segment profiles, revenue share,
+    and the RFM-score spread — into one shareable workbook.
+    """
+    out = Path(__file__).parent / "segment_summary.xlsx"
+
+    revenue = share.rename("Revenue share").to_frame()
+    revenue["Revenue share"] = (revenue["Revenue share"] * 100).round(1)
+
+    # RFM-score spread per segment (map each customer's cluster to its name).
+    segment_of = rfm["Cluster"].map(profile["Segment"])
+    score_spread = (
+        rfm.groupby(segment_of)["RFM_Score"]
+        .describe()[["mean", "min", "max"]].round(1)
+    )
+
+    with pd.ExcelWriter(out, engine="openpyxl") as writer:
+        profile.to_excel(writer, sheet_name="Segment profiles")
+        revenue.to_excel(writer, sheet_name="Revenue share")
+        score_spread.to_excel(writer, sheet_name="RFM score spread")
+
+    print(f"Saved stakeholder summary to {out.name}")
+
+
 def compare_models(X_scaled: np.ndarray, k: int) -> None:
     """Sanity-check the choice of K-Means against a different algorithm.
 
@@ -319,7 +346,7 @@ def main() -> None:
     plot_snake(scaled_df, names)
 
     # Revenue concentration — small segments can carry most of the money.
-    plot_revenue_share(rfm, names)
+    share = plot_revenue_share(rfm, names)
 
     # --- Chart 1: segment sizes ---
     fig, ax = plt.subplots(figsize=(6, 3.5))
@@ -369,6 +396,9 @@ def main() -> None:
     # Save the labelled customer table for reference.
     rfm.to_csv(Path(__file__).parent / "customer_segments.csv")
     print("Saved per-customer segments to customer_segments.csv")
+
+    # Bundle the headline tables into a shareable Excel workbook.
+    export_summary(profile, share, rfm)
 
 
 if __name__ == "__main__":
